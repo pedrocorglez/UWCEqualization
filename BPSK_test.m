@@ -36,10 +36,10 @@ dfe = comm.DecisionFeedbackEqualizer('Algorithm','LMS', ...
 
 %We create the progress bar and initiate the variables
 f = waitbar(0,'Calculating BERs...');
-ber_nf = zeors(Packets, length(SNR));
-ber_zf = zeors(Packets, length(SNR));
-ber_mmse = zeors(Packets, length(SNR));
-ber_dfe = zeors(Packets, length(SNR));
+ber_nf = zeros(Packets, length(SNR));
+ber_zf = zeros(Packets, length(SNR));
+ber_mmse = zeros(Packets, length(SNR));
+ber_dfe = zeros(Packets, length(SNR));
 
 %We start the simulation
 for i=1:Packets
