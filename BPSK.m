@@ -20,10 +20,10 @@ Channel_data=load(CRfile); % Data simulated with Stojanovic script
 Lf=401; Lt_tot=3603; T_SS=60; T_tot=3*T_SS;
 fmin=5e3; % minimum frequency [Hz]
 B=10e3; % bandwidth [Hz]
-df=25; % frequency resolution [Hz], f_vec=fmin:df:fmax; 
-dt=50e-3; % time resolution [seconds] 
+df=25; % frequency resolution [Hz], f_vec=fmin:df:fmax;
+dt=50e-3; % time resolution [seconds]
 T_SS=60; % coherence time of the small-scale variations [seconds]
-shift=10; skip=10; 
+shift=10; skip=10;
 
 % Equalizer Parameters
 EQ = 2;
@@ -42,11 +42,12 @@ h_raw = h_raw/norm(h_raw); %Normalization of the CR
 figure; axes('fontsize', 16);
 % hmat2plot= abs(hmat(1:end, 1:skip:end)).';
 s = surf(((0:Lf-1)-shift)/B*1000, (0:skip:Lt_tot-1)*dt, (circshift(abs(hmat(1:end, 1:skip:end)), shift)).',  'CDataMapping','scaled', 'EdgeColor', 'none');
-xlabel('delay [ms]', 'fontsize', 16), ylabel('time [s]', 'fontsize', 16), axis('ij'); 
+xlabel('delay [ms]', 'fontsize', 16), ylabel('time [s]', 'fontsize', 16), axis('ij');
 set(gca,'YTick', 0:T_SS:T_tot);
 colorbar;
 axis([-1 20 0 180 0 inf]);
 view([130.871299093656 39.7200698977097]);
+title('Channel Responses through Time');
 
 
 % The Channel Response is shown
@@ -60,7 +61,7 @@ axis([-inf inf -inf inf]);
 subplot(3,1,2)
 plot(((0:Lf-1)-shift)/B*1000,real(h_raw));
 title('Real','fontsize', 12);
-xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12) 
+xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12)
 axis([-inf inf -inf inf]);
 
 subplot(3,1,3)
@@ -88,9 +89,12 @@ data = randi([0 1],L_data,1);
 % bpsk mapper
 data_mod = pskmod(data, M);
 
+
 % Calculation of the symbols received
-data_r = conv(h_sym,data_mod);
-data_r = awgn(data_r,SNR);
+data_r_nonoise = conv(h_sym,data_mod);
+data_r = awgn(data_r_nonoise,SNR);
+var_n = 10^(SNR/10);
+var_s = var(data_r_nonoise);
 
 scatterplot(data_r);
 
@@ -98,19 +102,23 @@ switch(EQ)
     case 1
         disp('Equalization - ZFE');
         disp(['ZF Equalizer Design: N=', num2str(nTaps)]);
-        [h_eq,MSE,optDelay]=zf_equalizer(h_sym,nTaps,delay);
+        % Calculating ZF filter
+        H = fft(h_sym);
+        h_eq = ifft(1./H);
         data_eq = conv(h_eq,data_r);
     case 2
         disp('Equalization - MMSE');
         disp(['MMSE Equalizer Design: N=', num2str(nTaps)...
             , 'SNR=', num2str(SNR)]);
-        [h_eq,MSE,optDelay]=mmse_equalizer(h_sym,SNR,nTaps,delay);
+        % Calculating MMSE filter
+        H = fft(h_sym);
+        h_eq = ifft(conj(H)./((abs(H).^2)+(var_n/var_s)));
         data_eq = conv(h_eq,data_r);
     case 3
         disp('Equalization - DFE');
         dfe = comm.DecisionFeedbackEqualizer('Algorithm','LMS', ...
             'NumForwardTaps',20,'NumFeedbackTaps',10,'StepSize',0.03);
-
+        
         data_eq = dfe(data_r, data_mod);
     otherwise
         disp('EQ no es una opción válida.');
@@ -124,13 +132,13 @@ if (EQ == 1 | EQ == 2)
     title('Symbol Spaced Channels Response ','fontsize', 12);
     xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12)
     axis([0 40 -inf inf]);
-
+    
     subplot(2,1,2)
-    plot(((0:nTaps-1))*q/B*1000,abs(h_eq));
+    plot(((0:length(h_eq)-1))*q/B*1000,abs(h_eq));
     title('Real','fontsize', 12);
-    xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12) 
+    xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12)
     axis([0 40 -inf inf]);
-
+    
     sgtitle('Channel Response','fontsize', 16);
 end
 
@@ -141,13 +149,3 @@ data_demod_eq = pskdemod(data_eq, M);
 
 [~, ber] = biterr(data_demod(1:L_data), data)
 [~, ber_eq] = biterr(data_demod_eq(1:L_data), data)
-% % % MMSE
-% z=filter([1 zeros(1,19)],[1],data_r(1:L_lea));
-% Rxx=xcorr(data_r(1:L_lea));
-% Rxz=xcorr(data_mod(1:L_lea),z);
-% x=toeplitz([Rxx ; zeros(5,1)],zeros(length(Rxx)+5,1));
-% cof=x\([Rxz ; zeros(5,1)]); % coefficients for MMSE equalizer...
-% 
-% data_eq = filter(cof,[1],data_r);
-
-% 

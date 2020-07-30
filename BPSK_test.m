@@ -34,8 +34,12 @@ delay = 0;
 dfe = comm.DecisionFeedbackEqualizer('Algorithm','LMS', ...
         'NumForwardTaps',20,'NumFeedbackTaps',10,'StepSize',0.03,'ReferenceTap', 1);
 
-%We create the progress bar
+%We create the progress bar and initiate the variables
 f = waitbar(0,'Calculating BERs...');
+ber_nf = zeors(Packets, length(SNR));
+ber_zf = zeors(Packets, length(SNR));
+ber_mmse = zeors(Packets, length(SNR));
+ber_dfe = zeors(Packets, length(SNR));
 
 %We start the simulation
 for i=1:Packets
@@ -64,46 +68,37 @@ for i=1:Packets
     data_r_nonoise = conv(h_sym,data_mod);
     
     for j=1:length(SNR)
-        % Adding noise to the signal affected by the channel
+        % Adding noise to the signal affected by the channel and
+        % calculating variance to get the MMSE filter
         data_r = awgn(data_r_nonoise,SNR(j));
         var_n = 10^(-SNR(j)/10);
         var_s = var(data_r_nonoise);
+        
         % Demodulation of the data without filtering
         data_demod = pskdemod(data_r, M);
         
         [~, ber] = biterr(data_demod(1:L_data), data);
         ber_nf(i,j)=ber;
         
-        % Filtro Zero-Forcing
-%         disp('Equalization - ZFE');
-%         disp(['ZF Equalizer Design: N=', num2str(nTaps)]);
-%         [h_eq,MSE_zf(i,j),optDelay]=zf_equalizer(h_sym,nTaps,delay);
-%         data_eq = conv(h_eq,data_r);
+        % Calculating ZF filter
         H = fft(h_sym);
         h_eq = ifft(1./H);
         data_eq = conv(h_eq,data_r);  
-        
+            %Demodulation of ZF filtered signal
         data_demod_eq = pskdemod(data_eq, M);
         [~, ber] = biterr(data_demod_eq(1:L_data), data);
         ber_zf(i,j)=ber;
         
-        %Filtro MMSE
-%         disp('Equalization - MMSE');
-%         disp(['MMSE Equalizer Design: N=', num2str(nTaps)...
-%             , 'SNR=', num2str(SNR(j))]);
-%         [h_eq,MSE_mmse(i,j),optDelay]=mmse_equalizer(h_sym,SNR(j),nTaps,delay);
-%         data_eq = conv(h_eq,data_r);
+        % Calculating MMSE filter
         H = fft(h_sym);
         h_eq = ifft(conj(H)./((abs(H).^2)+(var_n/var_s)));
         data_eq = conv(h_eq,data_r);    
-        
+            % Demodulation of MMSE filtered signal
         data_demod_eq = pskdemod(data_eq, M);
         [~, ber] = biterr(data_demod_eq(1:L_data), data);
         ber_mmse(i,j)=ber;
         
         %Filtro DFE
-        disp('Equalization - DFE');
-        
         data_eq = dfe(data_r, data_mod);
         
         data_demod_eq = pskdemod(data_eq, M);
