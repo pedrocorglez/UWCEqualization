@@ -37,8 +37,6 @@ hmat = Channel_data.hmat;
 h_raw = circshift(hmat(:, k), shift); % From all the CR we select a random one
 h_raw = h_raw/norm(h_raw); %Normalization of the CR
 
-
-
 figure; axes('fontsize', 16);
 % hmat2plot= abs(hmat(1:end, 1:skip:end)).';
 s = surf(((0:Lf-1)-shift)/B*1000, (0:skip:Lt_tot-1)*dt, (circshift(abs(hmat(1:end, 1:skip:end)), shift)).',  'CDataMapping','scaled', 'EdgeColor', 'none');
@@ -71,8 +69,6 @@ xlabel('delay [ms]', 'fontsize', 12), ylabel('Amplitude', 'fontsize', 12)
 axis([-inf inf -inf inf]);
 
 sgtitle('Channel Response','fontsize', 16);
-
-
 
 %Resample of the Channel's Response from the first arrival
 [p,q] = rat(Fs_sym / Fs_h);
@@ -113,6 +109,7 @@ switch(EQ)
         % Calculating MMSE filter
         H = fft(h_sym);
         h_eq = ifft(conj(H)./((abs(H).^2)+(var_n/var_s)));
+%         h_eq = ifft(conj(H)./((conj(H).*H)));
         data_eq = conv(h_eq,data_r);
     case 3
         disp('Equalization - DFE');

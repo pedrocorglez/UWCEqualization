@@ -71,8 +71,10 @@ for i=1:Packets
         % Adding noise to the signal affected by the channel and
         % calculating variance to get the MMSE filter
         data_r = awgn(data_r_nonoise,SNR(j));
-        var_n = 10^(-SNR(j)/10);
+%         var_n = 10^(-SNR(j)/10);
+%         var_s = var(data_r_nonoise);
         var_s = var(data_r_nonoise);
+        var_n = 10^((10*log10(var_s)-SNR(j))/10);
         
         % Demodulation of the data without filtering
         data_demod = pskdemod(data_r, M);
@@ -92,6 +94,7 @@ for i=1:Packets
         % Calculating MMSE filter
         H = fft(h_sym);
         h_eq = ifft(conj(H)./((abs(H).^2)+(var_n/var_s)));
+%         h_eq = ifft(conj(H)./((conj(H).*H)));
         data_eq = conv(h_eq,data_r);    
             % Demodulation of MMSE filtered signal
         data_demod_eq = pskdemod(data_eq, M);
